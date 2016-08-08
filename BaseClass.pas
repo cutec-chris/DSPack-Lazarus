@@ -55,7 +55,7 @@ unit BaseClass;
 interface
 
 uses
-  Windows, SysUtils, Classes, Math, ActiveX, Messages, DirectShow9,
+  Windows, SysUtils, Classes, Math, ActiveX, Messages, directshow9,
 {$IFDEF WITH_PROPERTY_PAGE}
   Forms,
 {$ENDIF}
@@ -553,6 +553,8 @@ type
     function DeliverNewSegment(Start, Stop: TReferenceTime; Rate: double): HRESULT; virtual;
   end;
 
+  { TBCBaseInputPin }
+
   TBCBaseInputPin = class(TBCBasePin, IMemInputPin)
   protected
     FAllocator: IMemAllocator;    // Default memory allocator
@@ -592,7 +594,7 @@ type
     // do something with this media sample
     function Receive(pSample: IMediaSample): HRESULT; virtual; stdcall;
     // do something with these media samples
-    function ReceiveMultiple(pSamples: PIMediaSampleArray; nSamples: Longint;
+    function ReceiveMultiple(var pSamples: IMediaSample; nSamples: Longint;
         out nSamplesProcessed: Longint): HRESULT; virtual; stdcall;
      // See if Receive() blocks
     function ReceiveCanBlock: HRESULT; virtual; stdcall;
@@ -5653,7 +5655,7 @@ end;
 // fail). After calling this, you need to free any queued data
 // and then call downstream.
 
-function TBCBaseInputPin.BeginFlush: HRESULT;
+function TBCBaseInputPin.BeginFlush: HRESULT; stdcall;
 begin
     //  BeginFlush is NOT synchronized with streaming but is part of
     //  a control action - hence we synchronize with the filter
@@ -5726,7 +5728,7 @@ end;
 // then call this method to clear the m_bFlushing flag and re-enable
 // receives
 
-function TBCBaseInputPin.EndFlush: HRESULT;
+function TBCBaseInputPin.EndFlush: HRESULT; stdcall;
 begin
     //  Endlush is NOT synchronized with streaming but is part of
     //  a control action - hence we synchronize with the filter
@@ -5756,8 +5758,8 @@ end;
        NotifyAllocator().
 
    Override this to provide your own allocator.}
-function TBCBaseInputPin.GetAllocator(
-  out ppAllocator: IMemAllocator): HRESULT;
+function TBCBaseInputPin.GetAllocator(out ppAllocator: IMemAllocator): HRESULT;
+  stdcall;
 begin
   FLock.Lock;
   try
@@ -5779,8 +5781,8 @@ end;
 // to support other people's allocators but need a specific alignment
 // or prefix.
 
-function TBCBaseInputPin.GetAllocatorRequirements(
-  out pProps: TAllocatorProperties): HRESULT;
+function TBCBaseInputPin.GetAllocatorRequirements(out
+  pProps: TAllocatorProperties): HRESULT; stdcall;
 begin
   result := E_NOTIMPL;
 end;
@@ -5801,6 +5803,7 @@ begin
 end;
 
 function TBCBaseInputPin.Notify(pSelf: IBaseFilter; q: TQuality): HRESULT;
+  stdcall;
 begin
 {$IFDEF DEBUG}
   DbgLog(self, 'IQuality.Notify called on an input pin');
@@ -5814,7 +5817,7 @@ end;
   will undoubtedly have to lock the object so this might help remind people }
 
 function TBCBaseInputPin.NotifyAllocator(pAllocator: IMemAllocator;
-  bReadOnly: BOOL): HRESULT;
+  bReadOnly: BOOL): HRESULT; stdcall;
 begin
   FLock.Lock;
   try
@@ -5872,7 +5875,7 @@ end;
   synchronization so that samples are not processed when the pin is
   disconnected etc. }
 
-function TBCBaseInputPin.Receive(pSample: IMediaSample): HRESULT;
+function TBCBaseInputPin.Receive(pSample: IMediaSample): HRESULT; stdcall;
 var Sample2: IMediaSample2;
 begin
   ASSERT(pSample <> nil);
@@ -5934,7 +5937,7 @@ end;
 
 // See if Receive() might block
 
-function TBCBaseInputPin.ReceiveCanBlock: HRESULT;
+function TBCBaseInputPin.ReceiveCanBlock: HRESULT; stdcall;
 var
   c, Pins, OutputPins: Integer;
   Pin: TBCBasePin;
@@ -5984,8 +5987,8 @@ end;
 
 //  Receive multiple samples
 
-function TBCBaseInputPin.ReceiveMultiple(pSamples: PIMediaSampleArray;
-  nSamples: Integer; out nSamplesProcessed: Integer): HRESULT;
+function TBCBaseInputPin.ReceiveMultiple(var pSamples: IMediaSample;
+  nSamples: Longint; out nSamplesProcessed: Longint): HRESULT; stdcall;
 type
   TMediaSampleDynArray = array of IMediaSample;
 begin
@@ -5994,7 +5997,7 @@ begin
   dec(nSamples);
   while (nSamples >= 0) do
   begin
-    result := Receive(pSamples[nSamplesProcessed]);
+    result := Receive(pSamples);
     //  S_FALSE means don't send any more
     if (result <> S_OK) then break;
     inc(nSamplesProcessed);
@@ -9119,7 +9122,7 @@ begin
     {$IFDEF FPC}
     // martin begin
     result := ti.Invoke(Pointer(Integer(Self)), DISPID, Flags, TDispParams(Params),
-      Variant(VarResult^), ActiveX.EXCEPINFO(ExcepInfo^), UINT(ArgErr^));
+      PVariant(VarResult^), ActiveX.PEXCEPINFO(ExcepInfo^), PUINT(ArgErr^));
     // martin end
     {$ELSE}
     result := ti.Invoke(Pointer(Integer(Self)), DISPID, Flags, TDispParams(Params),
@@ -9174,7 +9177,7 @@ begin
   {$IFDEF FPC}
   // martin begin
   result := ti.Invoke(Pointer(Integer(Self)), DISPID, Flags, TDispParams(Params),
-    Variant(VarResult^), ActiveX.EXCEPINFO(ExcepInfo^), UINT(ArgErr^));
+    PVariant(VarResult^), ActiveX.PEXCEPINFO(ExcepInfo^), PUINT(ArgErr^));
   // martin end
   {$ELSE}
   result := ti.Invoke(Pointer(Integer(Self)), DISPID, Flags,
@@ -9236,7 +9239,7 @@ begin
   {$IFDEF FPC}
   // martin begin
   result := ti.Invoke(Pointer(Integer(Self)), DISPID, Flags, TDispParams(Params),
-    Variant(VarResult^), ActiveX.EXCEPINFO(ExcepInfo^), UINT(ArgErr^));
+    PVariant(VarResult^), ActiveX.PEXCEPINFO(ExcepInfo^), PUINT(ArgErr^));
   // martin end
   {$ELSE}
   result := ti.Invoke(Pointer(Integer(Self)), DISPID, Flags,

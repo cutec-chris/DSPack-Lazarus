@@ -7,8 +7,8 @@ unit dspack_lazarus;
 interface
 
 uses
-  BaseClass, DXSUtil, WMF9, DSPack, MediaTypeEditor, BaseFilterEditor, 
-  DSEditors, LazarusPackageIntf;
+  BaseClass, DXSUtil, DSPack, MediaTypeEditor, BaseFilterEditor, DSEditors, 
+  LazarusPackageIntf;
 
 implementation
 
